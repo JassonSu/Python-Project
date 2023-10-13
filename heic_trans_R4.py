@@ -4,6 +4,7 @@ from PIL import ImageTk , Image
 from tkinter import ttk
 from tkinter import filedialog
 import os
+import threading
 import pillow_heif
 from pillow_heif import register_heif_opener
 register_heif_opener()
@@ -40,6 +41,8 @@ def clear():
     c.set('')  
 #    dir_entry.delete('0','end')   # 清空輸入欄位內容
 
+
+
 # 使用範例
 def heic_trans_jpg():
     target_path=f'{folder_path}/trans-jpg'
@@ -51,28 +54,38 @@ def heic_trans_jpg():
     jpg_dataset=search_jpg_files(target_path)
     heic_dataset=search_heic_files(folder_path)
 
+    def im_save(im_gen,file_name):
+        for im_source in im_gen():         
+            im_source.save(f"{target_path}/{file_name}.jpg",format="jpeg")
+
     def heic_gen():             # my_generator 是一个生成器函数，它会在每次迭代时产生一个值，并在下一次迭代时继续执行。
         global files_hg
         for files_hg in heic_dataset:
             heic_image_o=Image.open(f'{folder_path}/{files_hg}.heic')            
             yield heic_image_o
 
+    def heic_rest_gen():             # my_generator 是一个生成器函数，它会在每次迭代时产生一个值，并在下一次迭代时继续执行。
+        global files_rest_hg
+        for files_rest_hg in im_rest_dataset:
+            heic_image_r=Image.open(f'{folder_path}/{files_rest_hg}.heic')
+            yield heic_image_r
+
     if jpg_dataset==[]:
-        for heic_image_s in heic_gen():
-            heic_image_s.save(f"{target_path}/{files_hg}.jpg",format="jpeg")
-            jpg_dataset.append(files_hg)
-            c.set(f'轉檔{files_hg}')    
+        heic_rest_gen
+        im_save(heic_gen,files_hg)
+        #for heic_image_s in heic_gen():
+        #    heic_image_s.save(f"{target_path}/{files_hg}.jpg",format="jpeg")
+        #    jpg_dataset.append(files_hg)
+        c.set(f'轉檔{files_hg}')    
             
     else:
         im_rest_dataset=list(set(heic_dataset)-set(jpg_dataset))
-        def heic_rest_gen():             # my_generator 是一个生成器函数，它会在每次迭代时产生一个值，并在下一次迭代时继续执行。
-            global files_rest_hg
-            for files_rest_hg in im_rest_dataset:
-                heic_image_r=Image.open(f'{folder_path}/{files_rest_hg}.heic')
-                yield heic_image_r
-        for heic_image_r in heic_rest_gen():          
-            heic_image_r.save(f"{target_path}/{files_rest_hg}.jpg",format="jpeg")
-            c.set(f'轉檔{files_rest_hg}')
+        heic_rest_gen
+        files_rest_hg=next(iter(im_rest_dataset))
+        im_save(heic_rest_gen,files_rest_hg)
+        #for heic_image_r in heic_rest_gen():          
+        #    heic_image_r.save(f"{target_path}/{files_rest_hg}.jpg",format="jpeg")
+        c.set(f'轉檔{files_rest_hg}')
     c.set(f'已轉{len(im_rest_dataset)}個heic檔完成!\n檔案存在{target_path}')
 
 root = tk.Tk()
